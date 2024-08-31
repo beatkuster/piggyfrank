@@ -15,3 +15,4 @@ docs/
 
 # added by bkey
 .password
+*.code-workspace

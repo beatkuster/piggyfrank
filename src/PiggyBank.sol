@@ -4,16 +4,16 @@ pragma solidity ^0.8.18;
 error NotOwnerOrBeneficiary();
 
 contract PiggyBank {
-    uint256 private deploymentTimestamp;
-    uint256 private lockupPeriodInSeconds;
-
+    uint256 private immutable i_deploymentTimestamp;
     address private immutable i_owner;
     address private immutable i_beneficiary;
+    uint256 private lockupPeriodInSeconds; // for PROD should be immutable as well...
 
-    constructor(address _beneficiary) {
-        deploymentTimestamp = block.timestamp;
+    constructor(address _beneficiary, uint256 _lockupPeriodInSeconds) {
+        i_deploymentTimestamp = block.timestamp;
         i_owner = msg.sender;
         i_beneficiary = _beneficiary;
+        lockupPeriodInSeconds = _lockupPeriodInSeconds;
     }
 
     function deposit() public payable {
@@ -30,7 +30,7 @@ contract PiggyBank {
     }
 
     function getDeplomyentTimestamp() public view returns (uint256) {
-        return deploymentTimestamp;
+        return i_deploymentTimestamp;
     }
 
     function getLockupPeriod() public view returns (uint256) {
@@ -43,14 +43,15 @@ contract PiggyBank {
 
     function hasLockupPeriodExpired() public view returns (bool) {
         uint256 currentTimestamp = block.timestamp;
-        return currentTimestamp >= deploymentTimestamp + lockupPeriodInSeconds;
+        return
+            currentTimestamp >= i_deploymentTimestamp + lockupPeriodInSeconds;
     }
 
     function getRemainingLockupPeriod() public view returns (int256) {
         uint256 currentTimestamp = block.timestamp;
         // casting values before calculation to prevent underflow
         return
-            int256((deploymentTimestamp + lockupPeriodInSeconds)) -
+            int256((i_deploymentTimestamp + lockupPeriodInSeconds)) -
             int256(currentTimestamp);
     }
 
