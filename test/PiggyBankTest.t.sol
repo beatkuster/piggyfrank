@@ -10,29 +10,46 @@ import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol";
 contract PiggyBankTest is Test {
     PiggyBank piggyBank;
     HelperConfig config;
+    address beneficiary;
     address zchf;
+    uint256 lockupPeriodInSeconds;
 
     // cheatcode to create a valid address
-    address USER = makeAddr("tester");
-    address ZERO_ADDRESS = makeAddr("");
+    address USER_BOB = makeAddr("tester_bob");
+    address USER_ALICE = makeAddr("tester_alice");
+    address TOKEN_NOT_IN_ALLOWLIST = makeAddr("TokenNotInAllowlist");
 
     uint256 constant STARTING_BALANCE = 1 ether;
     uint256 constant SEND_VALUE = 0.001 ether; // = 1e15 Wei
-    uint256 constant BLOCK_TIMESTAMP = 1725184800; // 01.09.2024 10:00 UTC
+    uint256 constant DEPOSIT_INITAL = 799;
+    uint256 constant BLOCK_TIMESTAMP_INITIAL = 1725184800; // 01.09.2024 10:00 UTC
+    uint256 constant BLOCK_TIMESTAMP_PLUS1h = 1725188400; // 01.09.2024 11:00 UTC
+
+    // modifiers
+    modifier zchfDeposited() {
+        // Bob deposits ZCHF into PiggyBank
+        vm.startPrank(USER_BOB);
+        ERC20Mock(zchf).approve(address(piggyBank), STARTING_BALANCE);
+        piggyBank.deposit(USER_BOB, zchf, DEPOSIT_INITAL);
+        vm.stopPrank();
+        _;
+    }
 
     // setUp() is executed before EACH test
     function setUp() external {
         // configuring testnet
-        vm.warp(1725184800);
-        vm.deal(USER, STARTING_BALANCE);
+        vm.warp(BLOCK_TIMESTAMP_INITIAL);
+        vm.deal(USER_BOB, STARTING_BALANCE);
 
         // deploying new PiggyBank on testnet
         DeployPiggyBank deployPiggyBank = new DeployPiggyBank();
         (piggyBank, config) = deployPiggyBank.run();
-        (zchf,) = config.activeNetworkConfig();
+        (beneficiary, zchf,) = config.activeNetworkConfig();
+        lockupPeriodInSeconds = piggyBank.getLockupPeriod();
 
-        // mint our test user some initial balance of ZCHF
-        ERC20Mock(zchf).mint(USER, STARTING_BALANCE);
+        // mint our test users some initial balance of ZCHF
+        ERC20Mock(zchf).mint(USER_ALICE, STARTING_BALANCE);
+        ERC20Mock(zchf).mint(USER_BOB, STARTING_BALANCE);
 
         console.log("Finished execution of setUp()");
     }
@@ -50,37 +67,75 @@ contract PiggyBankTest is Test {
     }
 
     function testGetDeploymentTimestamp() public view {
-        assertEq(piggyBank.getDeplomyentTimestamp(), BLOCK_TIMESTAMP);
-    }
-
-    function testDepositEth() public {
-        //console.log("Balance before deposit: ", address(piggyBank).balance);
-        piggyBank.deposit{value: SEND_VALUE}(ZERO_ADDRESS, ZERO_ADDRESS, 0);
-        //console.log("Balance after deposit: ", address(piggyBank).balance);
-        assertEq(address(piggyBank).balance, SEND_VALUE);
+        // works because block time warped in setUp() function
+        assertEq(piggyBank.getDeplomyentTimestamp(), BLOCK_TIMESTAMP_INITIAL);
     }
 
     function testDepositZchf() public {
-        vm.startPrank(USER);
+        vm.startPrank(USER_BOB);
         ERC20Mock(zchf).approve(address(piggyBank), STARTING_BALANCE);
-        piggyBank.deposit(USER, zchf, 799);
+        piggyBank.deposit(USER_BOB, zchf, DEPOSIT_INITAL);
         vm.stopPrank();
-        assertEq(piggyBank.getBalanceOfDepositor(USER), 799);
+        assertEq(piggyBank.getTokenBalanceOfDepositor(USER_BOB), 799);
     }
 
-    function testWithdrawEthAsBeneficiary() public {
-        piggyBank.deposit{value: SEND_VALUE}(ZERO_ADDRESS, ZERO_ADDRESS, 0);
-        piggyBank.deposit{value: 2 * SEND_VALUE}(ZERO_ADDRESS, ZERO_ADDRESS, 0);
-        vm.prank(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC);
-        piggyBank.withdraw();
-        assertEq(address(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC).balance, 3 * SEND_VALUE);
-    }
-
-    function testOnlyBeneficiaryCanWithdrawEth() public {
-        piggyBank.deposit{value: SEND_VALUE}(ZERO_ADDRESS, ZERO_ADDRESS, 0);
+    function testDepositTokenNotInAllowlist() public {
+        vm.startPrank(USER_BOB);
         vm.expectRevert();
-        vm.prank(address(5));
+        piggyBank.deposit(USER_BOB, TOKEN_NOT_IN_ALLOWLIST, DEPOSIT_INITAL);
+        vm.stopPrank();
+    }
+
+    function testDepositOfMultipleDepositorsZchf() public zchfDeposited {
+        // Bob deposits ZCHF into PiggyBank, see modifier
+        // Alice deposits ZCHF into PiggyBank
+        vm.startPrank(USER_ALICE);
+        ERC20Mock(zchf).approve(address(piggyBank), STARTING_BALANCE);
+        piggyBank.deposit(USER_ALICE, zchf, 100);
+        vm.stopPrank();
+
+        // Assert
+        assertEq(piggyBank.getTokenBalanceOfPiggyBank(), DEPOSIT_INITAL + 100);
+    }
+
+    function testWithdrawZchf() public zchfDeposited {
+        // Bob deposits ZCHF into PiggyBank, see modifier
+        // Fast forward blocktime by 1h to allow withdrawal
+        vm.warp(BLOCK_TIMESTAMP_PLUS1h);
+
+        // Beneficiary withdraws ZCHF
+        vm.startPrank(beneficiary);
         piggyBank.withdraw();
+        vm.stopPrank();
+
+        // Assert Beneficiary has received funds
+        assertEq(ERC20Mock(zchf).balanceOf(beneficiary), DEPOSIT_INITAL);
+    }
+
+    function testWithdrawZchfFromMultipleDepositors() public {}
+
+    function testWithdrawBeforeLockupPeriodElapsed() public zchfDeposited {
+        // Bob deposits ZCHF into PiggyBank, see modifier
+        // Fast forward blocktime less than lockup period to fail withdrawal
+        vm.warp(BLOCK_TIMESTAMP_INITIAL + (lockupPeriodInSeconds - 5));
+
+        // Assert revert when trying to withdraw
+        vm.startPrank(beneficiary);
+        vm.expectRevert();
+        piggyBank.withdraw();
+        vm.stopPrank();
+    }
+
+    function testOnlyBeneficiaryCanWithdrawZchf() public zchfDeposited {
+        // Bob deposits ZCHF into PiggyBank, see modifier
+        // Fast forward blocktime by 1h to allow withdrawal
+        vm.warp(BLOCK_TIMESTAMP_PLUS1h);
+
+        // Assert revert if Bob tries to withdraw ZCHF
+        vm.startPrank(USER_BOB);
+        vm.expectRevert();
+        piggyBank.withdraw();
+        vm.stopPrank();
     }
 
     function testLockupPeriodExpired() public view {
@@ -88,6 +143,6 @@ contract PiggyBankTest is Test {
     }
 
     function testDepositEthWithoutFunctionCall() public view {
-        // TODO: implement test case for people sending ETH to contract directly without calling deposit()
+        // TODO: implement test case for people sending unwanted ETH to contract directly -> is this even possible?
     }
 }

@@ -42,7 +42,11 @@ contract PiggyBank {
     address private immutable i_owner;
 
     address[] private s_allowedTokens;
-    mapping(address => uint256) private s_depositorsAndBalance;
+
+    // s_balance is redundant because contained in s_depositorsAndBalance below?
+    // yes, but calculating it would require address[] of all depositors... -> do I want to track this?
+    mapping(address token => uint256 balance) private s_balance;
+    mapping(address user => mapping(address token => uint256 balance)) private s_depositorsAndBalance; //depositorToTokenBalance
 
     //////////////////////
     // Modifiers        //
@@ -70,25 +74,23 @@ contract PiggyBank {
     // Public Functions          //
     ///////////////////////////////
     function deposit(address depositor, address token, uint256 amount) public payable {
-        // is something needed in here for ETH? no but transaction must call payable function, otherwise sending ETH reverts (as long no receive/fallback implemented)
-        // TODO: also implement receive() & fallback()
-        // TODO: list of donor addresses & amount
-        ////////////////
-        // Ether: only modifier payable is required -> remove again as we only accept preapproved ERC20 tokens?
-        ///////////////
-        // ERC20
-        if (msg.value == 0) {
-            require(isAllowedToken(token), "ERC20 Token not on allowlist");
-            require(IERC20(token).transferFrom(depositor, address(this), amount), "ERC20 Token transfer failed");
-            s_depositorsAndBalance[depositor] += amount;
-        }
+        require(isAllowedToken(token), "ERC20 Token not in allowlist");
+        require(IERC20(token).transferFrom(depositor, address(this), amount), "ERC20 Token transfer failed");
+        s_depositorsAndBalance[depositor][token] += amount;
+        s_balance[token] += amount;
     }
 
     function withdraw() public OnlyOwnerOrBeneficiary {
-        // withdraw all funds to beneficiary address
-        (bool callSuccess, /* bytes memory dataReturned */ ) =
-            payable(i_beneficiary).call{value: address(this).balance}("");
-        require(callSuccess, "Withdrawal failed");
+        require(hasLockupPeriodExpired(), "Lockup Period has not expired yet");
+        // check all allowed tokens for balance and send back to beneficiary address
+        for (uint256 i = 0; i < s_allowedTokens.length; i++) {
+            address token = s_allowedTokens[i];
+            uint256 amount = s_balance[token];
+            if (amount > 0) {
+                require(IERC20(token).transfer(i_beneficiary, amount), "ERC20 Token transfer failed");
+            }
+        }
+
         // TODO: the instance should also be removed from PiggyBankFactory book keeping
         // TODO: can we "undeploy/destroy" contract?
     }
@@ -98,7 +100,7 @@ contract PiggyBank {
     }
 
     function isAllowedToken(address token) public view returns (bool) {
-        // Check if the provided token address is in the acceptedTokens array
+        // Check if the provided token address is in the allowedTokens array
         for (uint256 i = 0; i < s_allowedTokens.length; i++) {
             if (s_allowedTokens[i] == token) {
                 return true;
@@ -126,12 +128,35 @@ contract PiggyBank {
         return i_beneficiary;
     }
 
-    function getBalance() public view returns (uint256) {
-        return address(this).balance;
+    function getTokenBalanceOfPiggyBank() public view returns (uint256 totalBalance) {
+        // loop through each deposited token and get deposited amount
+        // we can summarize different tokens because only CHF stablecoins allowed
+        for (uint256 i = 0; i < s_allowedTokens.length; i++) {
+            address token = s_allowedTokens[i];
+            uint256 amount = s_balance[token];
+            totalBalance += amount;
+        }
+        return totalBalance;
     }
 
-    function getBalanceOfDepositor(address depositor) public view returns (uint256) {
-        return s_depositorsAndBalance[depositor];
+    function getChfBalanceOfPiggyBank() public view {
+        // TODO: same as getTokenBalanceOfPiggyBank() but
+        // add oracle call to get CHF market value for each token
+    }
+
+    function getTokenBalanceOfDepositor(address depositor) public view returns (uint256 balanceOfDepositor) {
+        // loop through each deposited token and get deposited amount for a certain depositor
+        for (uint256 i = 0; i < s_allowedTokens.length; i++) {
+            address token = s_allowedTokens[i];
+            uint256 amount = s_depositorsAndBalance[depositor][token];
+            balanceOfDepositor += amount;
+        }
+        return balanceOfDepositor;
+    }
+
+    function getChfBalanceOfDepositor() public view {
+        // TODO: same as getTokenBalanceOfDepositor() but
+        // add oracle call to get CHF market value for each token
     }
 
     function getLockupPeriod() public view returns (uint256) {

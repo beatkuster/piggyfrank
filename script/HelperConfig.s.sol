@@ -6,11 +6,13 @@ import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol";
 
 contract HelperConfig is Script {
     struct NetworkConfig {
+        address beneficiary;
         address zchf;
         uint256 deployerKey;
     }
 
     uint256 public DEFAULT_ANVIL_PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    address constant ANVIL_BENEFICIARY = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
 
     NetworkConfig public activeNetworkConfig;
 
@@ -26,6 +28,7 @@ contract HelperConfig is Script {
 
     function getSepoliaEthConfig() public view returns (NetworkConfig memory) {
         return NetworkConfig({
+            beneficiary: address(0),
             zchf: address(0),
             deployerKey: vm.envUint("PRIVATE_KEY") // what does this do?
         });
@@ -33,6 +36,7 @@ contract HelperConfig is Script {
 
     function getBaseSepoliaEthConfig() public view returns (NetworkConfig memory) {
         return NetworkConfig({
+            beneficiary: address(0),
             zchf: address(0),
             deployerKey: vm.envUint("PRIVATE_KEY") // what does this do?
         });
@@ -48,6 +52,10 @@ contract HelperConfig is Script {
         ERC20Mock zchfMock = new ERC20Mock("Frankencoin", "ZCHF", msg.sender, 1000e8);
         vm.stopBroadcast();
 
-        return NetworkConfig({zchf: address(zchfMock), deployerKey: DEFAULT_ANVIL_PRIVATE_KEY});
+        return NetworkConfig({
+            beneficiary: ANVIL_BENEFICIARY,
+            zchf: address(zchfMock),
+            deployerKey: DEFAULT_ANVIL_PRIVATE_KEY
+        });
     }
 }
