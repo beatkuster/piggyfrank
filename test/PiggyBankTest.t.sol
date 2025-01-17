@@ -12,6 +12,7 @@ contract PiggyBankTest is Test {
     HelperConfig config;
     address beneficiary;
     address zchf;
+    address usdc;
     uint256 lockupPeriodInSeconds;
 
     // cheatcode to create a valid address
@@ -39,17 +40,20 @@ contract PiggyBankTest is Test {
     function setUp() external {
         // configuring testnet
         vm.warp(BLOCK_TIMESTAMP_INITIAL);
-        vm.deal(USER_BOB, STARTING_BALANCE);
 
         // deploying new PiggyBank on testnet
         DeployPiggyBank deployPiggyBank = new DeployPiggyBank();
         (piggyBank, config) = deployPiggyBank.run();
-        (beneficiary, zchf,) = config.activeNetworkConfig();
+        (beneficiary, zchf, usdc,) = config.activeNetworkConfig();
         lockupPeriodInSeconds = piggyBank.getLockupPeriod();
 
         // mint our test users some initial balance of ZCHF
         ERC20Mock(zchf).mint(USER_ALICE, STARTING_BALANCE);
         ERC20Mock(zchf).mint(USER_BOB, STARTING_BALANCE);
+
+        // mint our test users some initial balance of USDC
+        ERC20Mock(usdc).mint(USER_ALICE, STARTING_BALANCE);
+        ERC20Mock(usdc).mint(USER_BOB, STARTING_BALANCE);
 
         console.log("Finished execution of setUp()");
     }
@@ -72,11 +76,21 @@ contract PiggyBankTest is Test {
     }
 
     function testDepositZchf() public {
+        //console.log("ZCHF has decimals: ", ERC20Mock(zchf).decimals());
         vm.startPrank(USER_BOB);
         ERC20Mock(zchf).approve(address(piggyBank), STARTING_BALANCE);
         piggyBank.deposit(USER_BOB, zchf, DEPOSIT_INITAL);
         vm.stopPrank();
-        assertEq(piggyBank.getTokenBalanceOfDepositor(USER_BOB), 799);
+        assertEq(piggyBank.getTokenBalanceOfDepositor(USER_BOB), DEPOSIT_INITAL);
+    }
+
+    function testDepositUsdc() public {
+        // console.log("USDC has decimals: ", ERC20Mock(usdc).decimals());
+        vm.startPrank(USER_BOB);
+        ERC20Mock(usdc).approve(address(piggyBank), STARTING_BALANCE);
+        piggyBank.deposit(USER_BOB, usdc, DEPOSIT_INITAL);
+        vm.stopPrank();
+        assertEq(piggyBank.getTokenBalanceOfDepositor(USER_BOB), DEPOSIT_INITAL);
     }
 
     function testDepositTokenNotInAllowlist() public {
@@ -96,6 +110,20 @@ contract PiggyBankTest is Test {
 
         // Assert
         assertEq(piggyBank.getTokenBalanceOfPiggyBank(), DEPOSIT_INITAL + 100);
+    }
+
+    function testDepositOfMultipleTokens() public {
+        // Bob deposits ZCHF and USDC into PiggyBank
+        vm.startPrank(USER_BOB);
+        ERC20Mock(zchf).approve(address(piggyBank), STARTING_BALANCE);
+        piggyBank.deposit(USER_BOB, zchf, DEPOSIT_INITAL);
+        ERC20Mock(usdc).approve(address(piggyBank), STARTING_BALANCE);
+        piggyBank.deposit(USER_BOB, usdc, DEPOSIT_INITAL);
+        vm.stopPrank();
+
+        // Assert
+        assertEq(piggyBank.getTokenBalanceOfPiggyBank(), DEPOSIT_INITAL * 2);
+        // I think this test should fail due to different decimals? Or are decimals really only relevant for displaying?
     }
 
     function testWithdrawZchf() public zchfDeposited {

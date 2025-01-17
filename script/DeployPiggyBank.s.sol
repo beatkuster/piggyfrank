@@ -15,11 +15,11 @@ contract DeployPiggyBank is Script {
     function run() external returns (PiggyBank, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
 
-        (address beneficiary, address zchf,) = helperConfig.activeNetworkConfig();
-        // why can I not use "address[] memory allowedTokens = [zchf]" ?
-        // check Solidity docs regarding array init
-        address[] memory allowedTokens = new address[](1);
+        (address beneficiary, address zchf, address usdc,) = helperConfig.activeNetworkConfig();
+
+        address[] memory allowedTokens = new address[](2);
         allowedTokens[0] = zchf;
+        allowedTokens[1] = usdc;
 
         // Everything between start & stop gets broadcasted to the local testnet
         vm.startBroadcast();

@@ -8,10 +8,17 @@ contract HelperConfig is Script {
     struct NetworkConfig {
         address beneficiary;
         address zchf;
+        address usdc;
         uint256 deployerKey;
     }
 
-    uint256 public DEFAULT_ANVIL_PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    // Ethereum Sepolia
+
+    // Base Sepolia
+    address constant BASE_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+
+    // Anvil
+    uint256 constant DEFAULT_ANVIL_PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
     address constant ANVIL_BENEFICIARY = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
 
     NetworkConfig public activeNetworkConfig;
@@ -30,6 +37,7 @@ contract HelperConfig is Script {
         return NetworkConfig({
             beneficiary: address(0),
             zchf: address(0),
+            usdc: address(0),
             deployerKey: vm.envUint("PRIVATE_KEY") // what does this do?
         });
     }
@@ -38,6 +46,7 @@ contract HelperConfig is Script {
         return NetworkConfig({
             beneficiary: address(0),
             zchf: address(0),
+            usdc: BASE_USDC,
             deployerKey: vm.envUint("PRIVATE_KEY") // what does this do?
         });
     }
@@ -49,12 +58,14 @@ contract HelperConfig is Script {
         }
 
         vm.startBroadcast();
-        ERC20Mock zchfMock = new ERC20Mock("Frankencoin", "ZCHF", msg.sender, 1000e8);
+        ERC20Mock zchfMock = new ERC20Mock("Frankencoin", "ZCHF", 18, msg.sender, 1000e8);
+        ERC20Mock usdcMock = new ERC20Mock("USDC", "USDC", 6, msg.sender, 1000e8);
         vm.stopBroadcast();
 
         return NetworkConfig({
             beneficiary: ANVIL_BENEFICIARY,
             zchf: address(zchfMock),
+            usdc: address(usdcMock),
             deployerKey: DEFAULT_ANVIL_PRIVATE_KEY
         });
     }

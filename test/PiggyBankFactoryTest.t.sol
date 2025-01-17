@@ -5,33 +5,37 @@ import {Test, console} from "forge-std/Test.sol";
 import {PiggyBank} from "../src/PiggyBank.sol";
 import {PiggyBankFactory, PiggyBankStructs} from "../src/PiggyBankFactory.sol";
 import {DeployPiggyBankFactory} from "../script/DeployPiggyBankFactory.s.sol";
+import {HelperConfig} from "../script/HelperConfig.s.sol";
 
 contract PiggyBankFactoryTest is Test {
-    address constant BENEFICIARY = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
-    address constant ZCHF_TOKEN = 0x20D1c515e38aE9c345836853E2af98455F919637; // Base Mainnet -> should be mock?
-    address[] allowedTokens = [ZCHF_TOKEN];
-
     PiggyBankFactory pgbFactory;
+    HelperConfig config;
+    address beneficiary;
+    address zchf;
+    address usdc;
+    address[] allowedTokens;
 
     function setUp() external {
         DeployPiggyBankFactory deployPgbFactory = new DeployPiggyBankFactory();
-        pgbFactory = deployPgbFactory.run();
+        (pgbFactory, config) = deployPgbFactory.run();
+        (beneficiary, zchf, usdc,) = config.activeNetworkConfig();
+        allowedTokens = [zchf, usdc];
     }
 
     function testPgbDeployment() public {
-        PiggyBank piggyBank = pgbFactory.createPiggyBankContract("MyTestPiggyBank1", BENEFICIARY, 900, allowedTokens);
+        PiggyBank piggyBank = pgbFactory.createPiggyBankContract("MyTestPiggyBank1", beneficiary, 900, allowedTokens);
         console.log("Created PiggyBank contract at: ", address(piggyBank));
     }
 
     function testPgbNotEmpty() public {
-        PiggyBank piggyBank = pgbFactory.createPiggyBankContract("MyTestPiggyBank1", BENEFICIARY, 900, allowedTokens);
+        PiggyBank piggyBank = pgbFactory.createPiggyBankContract("MyTestPiggyBank1", beneficiary, 900, allowedTokens);
         address retrievedBeneficiary = piggyBank.getBeneficiary();
-        assertEq(BENEFICIARY, retrievedBeneficiary);
+        assertEq(beneficiary, retrievedBeneficiary);
         console.log("PiggyBank's beneficiary is: ", retrievedBeneficiary);
     }
 
     function testCreateMultiplePgbs() public pgbsCreated {
-        PiggyBank[] memory piggyBanks = pgbFactory.getPiggyBanksByBeneficiary(BENEFICIARY);
+        PiggyBank[] memory piggyBanks = pgbFactory.getPiggyBanksByBeneficiary(beneficiary);
         for (uint256 i = 0; i < piggyBanks.length; i++) {
             console.log("PiggyBank Number: ", i, " has Name: ", vm.toString(piggyBanks[i].getName()));
         }
@@ -41,7 +45,7 @@ contract PiggyBankFactoryTest is Test {
         // Arrange
 
         // Act
-        PiggyBankStructs.MinimalPgb memory firstMinPgb = pgbFactory.getFirstPiggyBankStructByBeneficiary(BENEFICIARY);
+        PiggyBankStructs.MinimalPgb memory firstMinPgb = pgbFactory.getFirstPiggyBankStructByBeneficiary(beneficiary);
         console.log("First MinimalPgb Name: ", vm.toString(firstMinPgb.name));
 
         // Assert
@@ -53,7 +57,7 @@ contract PiggyBankFactoryTest is Test {
         // Arrange
 
         // Act
-        PiggyBankStructs.MinimalPgb[] memory minimalPgbs = pgbFactory.getAllPiggyBankStructsByBeneficiary(BENEFICIARY);
+        PiggyBankStructs.MinimalPgb[] memory minimalPgbs = pgbFactory.getAllPiggyBankStructsByBeneficiary(beneficiary);
         console.log("First Multi-MinimalPgb Name: ", vm.toString(minimalPgbs[0].name));
         console.log("First Multi-MinimalPgb Contract Address: ", vm.toString(minimalPgbs[0].contractAddress));
 
@@ -63,8 +67,8 @@ contract PiggyBankFactoryTest is Test {
     }
 
     modifier pgbsCreated() {
-        pgbFactory.createPiggyBankContract("MyTestPiggyBank1", BENEFICIARY, 900, allowedTokens);
-        pgbFactory.createPiggyBankContract("TheBestPiggyBank", BENEFICIARY, 1200, allowedTokens);
+        pgbFactory.createPiggyBankContract("MyTestPiggyBank1", beneficiary, 900, allowedTokens);
+        pgbFactory.createPiggyBankContract("TheBestPiggyBank", beneficiary, 1200, allowedTokens);
         _;
     }
 }
