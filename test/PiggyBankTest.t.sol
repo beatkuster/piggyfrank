@@ -4,12 +4,17 @@ pragma solidity ^0.8.18;
 import {Test, console} from "forge-std/Test.sol";
 import {PiggyBank} from "../src/PiggyBank.sol";
 import {DeployPiggyBank} from "../script/DeployPiggyBank.s.sol";
+import {HelperConfig} from "../script/HelperConfig.s.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol";
 
 contract PiggyBankTest is Test {
     PiggyBank piggyBank;
+    HelperConfig config;
+    address zchf;
 
     // cheatcode to create a valid address
     address USER = makeAddr("tester");
+    address ZERO_ADDRESS = makeAddr("");
 
     uint256 constant STARTING_BALANCE = 1 ether;
     uint256 constant SEND_VALUE = 0.001 ether; // = 1e15 Wei
@@ -23,7 +28,11 @@ contract PiggyBankTest is Test {
 
         // deploying new PiggyBank on testnet
         DeployPiggyBank deployPiggyBank = new DeployPiggyBank();
-        piggyBank = deployPiggyBank.run();
+        (piggyBank, config) = deployPiggyBank.run();
+        (zchf,) = config.activeNetworkConfig();
+
+        // mint our test user some initial balance of ZCHF
+        ERC20Mock(zchf).mint(USER, STARTING_BALANCE);
 
         console.log("Finished execution of setUp()");
     }
@@ -44,26 +53,31 @@ contract PiggyBankTest is Test {
         assertEq(piggyBank.getDeplomyentTimestamp(), BLOCK_TIMESTAMP);
     }
 
-    function testDeposit() public {
+    function testDepositEth() public {
         //console.log("Balance before deposit: ", address(piggyBank).balance);
-        piggyBank.deposit{value: SEND_VALUE}();
+        piggyBank.deposit{value: SEND_VALUE}(ZERO_ADDRESS, ZERO_ADDRESS, 0);
         //console.log("Balance after deposit: ", address(piggyBank).balance);
         assertEq(address(piggyBank).balance, SEND_VALUE);
     }
 
-    function testWithdrawAsBeneficiary() public {
-        piggyBank.deposit{value: SEND_VALUE}();
-        piggyBank.deposit{value: 2 * SEND_VALUE}();
-        vm.prank(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC);
-        piggyBank.withdraw();
-        assertEq(
-            address(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC).balance,
-            3 * SEND_VALUE
-        );
+    function testDepositZchf() public {
+        vm.startPrank(USER);
+        ERC20Mock(zchf).approve(address(piggyBank), STARTING_BALANCE);
+        piggyBank.deposit(USER, zchf, 799);
+        vm.stopPrank();
+        assertEq(piggyBank.getBalanceOfDepositor(USER), 799);
     }
 
-    function testOnlyBeneficiaryCanWithdraw() public {
-        piggyBank.deposit{value: SEND_VALUE}();
+    function testWithdrawEthAsBeneficiary() public {
+        piggyBank.deposit{value: SEND_VALUE}(ZERO_ADDRESS, ZERO_ADDRESS, 0);
+        piggyBank.deposit{value: 2 * SEND_VALUE}(ZERO_ADDRESS, ZERO_ADDRESS, 0);
+        vm.prank(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC);
+        piggyBank.withdraw();
+        assertEq(address(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC).balance, 3 * SEND_VALUE);
+    }
+
+    function testOnlyBeneficiaryCanWithdrawEth() public {
+        piggyBank.deposit{value: SEND_VALUE}(ZERO_ADDRESS, ZERO_ADDRESS, 0);
         vm.expectRevert();
         vm.prank(address(5));
         piggyBank.withdraw();
