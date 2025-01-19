@@ -9,7 +9,7 @@ contract DeployPiggyBankFactory is Script {
     function run() external returns (PiggyBankFactory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
 
-        // Everything between start & stop gets broadcasted to the local testnet
+        // Everything between start & stop gets broadcasted to the blockchain defined in forge script command
         vm.startBroadcast();
         PiggyBankFactory piggyBankFactory = new PiggyBankFactory();
         vm.stopBroadcast();

@@ -15,13 +15,13 @@ contract DeployPiggyBank is Script {
     function run() external returns (PiggyBank, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
 
-        (address beneficiary, address zchf, address usdc,) = helperConfig.activeNetworkConfig();
+        (address beneficiary, address zchf, address usdc) = helperConfig.activeNetworkConfig();
 
         address[] memory allowedTokens = new address[](2);
         allowedTokens[0] = zchf;
         allowedTokens[1] = usdc;
 
-        // Everything between start & stop gets broadcasted to the local testnet
+        // Everything between start & stop gets broadcasted to the blockchain defined in forge script command
         vm.startBroadcast();
         PiggyBank piggyBank = new PiggyBank(NAME, beneficiary, LOCKUP_PERIOD_IN_SECONDS, allowedTokens);
         vm.stopBroadcast();

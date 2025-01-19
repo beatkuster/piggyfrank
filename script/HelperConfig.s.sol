@@ -9,13 +9,14 @@ contract HelperConfig is Script {
         address beneficiary;
         address zchf;
         address usdc;
-        uint256 deployerKey;
     }
+    //uint256 deployerKey;
 
     // Ethereum Sepolia
 
     // Base Sepolia
     address constant BASE_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+    address constant BKEY_ETH_DEV_2 = 0xb726F2c1C7Df58ff1c4309Fb91162F14EF3cbbAb;
 
     // Anvil
     uint256 constant DEFAULT_ANVIL_PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
@@ -34,21 +35,17 @@ contract HelperConfig is Script {
     }
 
     function getSepoliaEthConfig() public view returns (NetworkConfig memory) {
-        return NetworkConfig({
-            beneficiary: address(0),
-            zchf: address(0),
-            usdc: address(0),
-            deployerKey: vm.envUint("PRIVATE_KEY") // what does this do?
-        });
+        return NetworkConfig({beneficiary: address(0), zchf: address(0), usdc: address(0)})
+        //deployerKey: vm.envUint("PRIVATE_KEY")
+        // This is be the private key of the account used for deployments
+        // Could be used as vm.startBroadcast(deployerKey);
+        ;
     }
 
     function getBaseSepoliaEthConfig() public view returns (NetworkConfig memory) {
-        return NetworkConfig({
-            beneficiary: address(0),
-            zchf: address(0),
-            usdc: BASE_USDC,
-            deployerKey: vm.envUint("PRIVATE_KEY") // what does this do?
-        });
+        return NetworkConfig({beneficiary: BKEY_ETH_DEV_2, zchf: address(0), usdc: BASE_USDC})
+        //deployerKey: vm.envUint("PRIVATE_KEY")
+        ;
     }
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory anvilNetworkConfig) {
@@ -62,11 +59,8 @@ contract HelperConfig is Script {
         ERC20Mock usdcMock = new ERC20Mock("USDC", "USDC", 6, msg.sender, 1000e8);
         vm.stopBroadcast();
 
-        return NetworkConfig({
-            beneficiary: ANVIL_BENEFICIARY,
-            zchf: address(zchfMock),
-            usdc: address(usdcMock),
-            deployerKey: DEFAULT_ANVIL_PRIVATE_KEY
-        });
+        return NetworkConfig({beneficiary: ANVIL_BENEFICIARY, zchf: address(zchfMock), usdc: address(usdcMock)})
+        //deployerKey: DEFAULT_ANVIL_PRIVATE_KEY
+        ;
     }
 }

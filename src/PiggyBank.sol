@@ -74,6 +74,7 @@ contract PiggyBank {
     // Public Functions          //
     ///////////////////////////////
     function deposit(address depositor, address token, uint256 amount) public payable {
+        // what are tradeoffs of having depositor parameter freely choosable? replace by msg.sender?
         require(isAllowedToken(token), "ERC20 Token not in allowlist");
         require(IERC20(token).transferFrom(depositor, address(this), amount), "ERC20 Token transfer failed");
         s_depositorsAndBalance[depositor][token] += amount;
@@ -92,10 +93,10 @@ contract PiggyBank {
         }
 
         // TODO: the instance should also be removed from PiggyBankFactory book keeping
-        // TODO: can we "undeploy/destroy" contract?
     }
 
     function setLockupPeriod(uint256 _lockupPeriodInSeconds) public {
+        // TODO: to be removed before PROD as lockupPeriod should be immutable
         lockupPeriodInSeconds = _lockupPeriodInSeconds;
     }
 
