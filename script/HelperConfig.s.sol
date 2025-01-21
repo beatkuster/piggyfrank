@@ -35,17 +35,11 @@ contract HelperConfig is Script {
     }
 
     function getSepoliaEthConfig() public view returns (NetworkConfig memory) {
-        return NetworkConfig({beneficiary: address(0), zchf: address(0), usdc: address(0)})
-        //deployerKey: vm.envUint("PRIVATE_KEY")
-        // This is be the private key of the account used for deployments
-        // Could be used as vm.startBroadcast(deployerKey);
-        ;
+        return NetworkConfig({beneficiary: address(0), zchf: address(0), usdc: address(0)});
     }
 
     function getBaseSepoliaEthConfig() public view returns (NetworkConfig memory) {
-        return NetworkConfig({beneficiary: BKEY_ETH_DEV_2, zchf: address(0), usdc: BASE_USDC})
-        //deployerKey: vm.envUint("PRIVATE_KEY")
-        ;
+        return NetworkConfig({beneficiary: BKEY_ETH_DEV_2, zchf: address(0), usdc: BASE_USDC});
     }
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory anvilNetworkConfig) {
@@ -59,8 +53,6 @@ contract HelperConfig is Script {
         ERC20Mock usdcMock = new ERC20Mock("USDC", "USDC", 6, msg.sender, 1000e8);
         vm.stopBroadcast();
 
-        return NetworkConfig({beneficiary: ANVIL_BENEFICIARY, zchf: address(zchfMock), usdc: address(usdcMock)})
-        //deployerKey: DEFAULT_ANVIL_PRIVATE_KEY
-        ;
+        return NetworkConfig({beneficiary: ANVIL_BENEFICIARY, zchf: address(zchfMock), usdc: address(usdcMock)});
     }
 }
