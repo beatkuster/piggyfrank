@@ -9,10 +9,6 @@ PiggyFrank consists of:
 
 ***This project is a prototype and for demonstration purposes only. This code has NOT been security audited. Do not use in production and at your own risk.***
 
-## Documentation
-
-https://book.getfoundry.sh/
-
 ## Usage
 
 ### Start local Anvil instance
