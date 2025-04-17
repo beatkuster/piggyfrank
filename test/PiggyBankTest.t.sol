@@ -44,7 +44,7 @@ contract PiggyBankTest is Test {
         // deploying new PiggyBank on testnet
         DeployPiggyBank deployPiggyBank = new DeployPiggyBank();
         (piggyBank, config) = deployPiggyBank.run();
-        (beneficiary, zchf, usdc,) = config.activeNetworkConfig();
+        (beneficiary, zchf, usdc) = config.activeNetworkConfig();
         lockupPeriodInSeconds = piggyBank.getLockupPeriod();
 
         // mint our test users some initial balance of ZCHF

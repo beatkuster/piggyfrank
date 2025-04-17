@@ -18,7 +18,7 @@ contract PiggyBankFactoryTest is Test {
     function setUp() external {
         DeployPiggyBankFactory deployPgbFactory = new DeployPiggyBankFactory();
         (pgbFactory, config) = deployPgbFactory.run();
-        (beneficiary, zchf, usdc,) = config.activeNetworkConfig();
+        (beneficiary, zchf, usdc) = config.activeNetworkConfig();
         allowedTokens = [zchf, usdc];
     }
 

@@ -1,19 +1,25 @@
-## Foundry
+## PiggyFrank
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**PiggyFrank is an onchain piggy bank that supports achieving saving goals and advances financial literacy for younger generations.**
 
-Foundry consists of:
+PiggyFrank consists of:
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+-   **PiggyBank**: PiggyFrank's smart contract implementation of a piggy bank.
+-   **PiggyBankFactory**: Smart contract to deploy piggy banks.
+
+***This project is a prototype and for demonstration purposes only. This code has NOT been security audited. Do not use in production and at your own risk.***
 
 ## Documentation
 
 https://book.getfoundry.sh/
 
 ## Usage
+
+### Start local Anvil instance
+
+```shell
+$ anvil
+```
 
 ### Build
 
@@ -33,34 +39,14 @@ $ forge test
 $ forge fmt
 ```
 
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
 ### Deploy
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+$ forge script script/DeployPiggyBankFactory.s.sol --rpc-url <your_rpc_url> --broadcast --sender <your_cast_wallet_address>
 ```
 
 ### Cast
 
 ```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+$ cast call <piggybankfactory_address> "getPgbCount()(uint256)"
 ```
